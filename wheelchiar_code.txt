@@ -1,0 +1,312 @@
+#include <SoftwareSerial.h>
+SoftwareSerial myserial_voice(6,7);
+SoftwareSerial myserial_tilt(4,5);
+
+int x;
+int y;
+float x1 = 0;
+float y1 = 0;
+byte com = 0; //reply from voice recognition
+int mode; // mode=1,2,3,4,5 for corresponding voice commands.
+float x_voltage=0, y_voltage=0;
+  
+          
+void setup(){
+myserial_voice.begin(9600);
+Serial.begin(9600);
+myserial_tilt.begin(9600);
+delay(1000);
+Serial.println("Setup is Running");
+delay(2000);
+Serial.println("Voice Module is initializing");
+initializeVoiceModule();
+Serial.println("Voice Module Successfully Initialized");
+}
+
+void loop(){
+
+  ProcessVoiceCommands();
+  if(mode==1){
+    Movement();
+   Serial.println("Wheel Chair is Driving"); 
+  }
+  if(mode==2){
+   x_voltage=2.5;
+   y_voltage=2.5;
+   Serial.println("Wheel chair is in stop condition");   
+  }if(mode==3){
+  //code for speed up;
+  
+  }if(mode==4){
+  //code for speed up
+    
+  }if(mode==5){
+  // play the help voice
+  }
+  
+  
+  
+}
+
+void initializeVoiceModule(){
+
+ myserial_voice.write(0xAA);
+ delay(1000);
+ myserial_voice.write(0x37);
+ delay(1000);
+ myserial_voice.write(0xAA);
+ delay(1000);
+ myserial_voice.write(0x24);
+ delay(1000);
+ while(!myserial_voice.available());
+ com = myserial_voice.read();
+ Serial.write(com);
+ myserial_voice.write(0xAA);
+ delay(1000);
+ myserial_voice.write(0x21);
+ delay(1000);
+ 
+  
+}
+
+void ProcessVoiceCommands(){
+
+while(!myserial_voice.available());
+com = myserial_voice.read();
+switch(com){
+
+case 0xcc:
+Serial.println("Successfully imported");
+break;
+
+case 0xe1:
+Serial.println("voice group importing failed.");
+myserial_voice.write(0xAA);
+myserial_voice.write(0x21);
+break;
+ 
+case 0x00:
+Serial.println("No group is Recorded");
+break;
+
+case 0x01:
+Serial.println("Group 1 is recorded");
+break;
+
+case 0x11:
+Serial.println("Drive Process");
+//play the Beep sound;
+delay(1000);
+Serial.println("Wheel chair is initializing");
+initialize();
+mode=1;
+break;
+
+case 0x12:
+Serial.println("Stop Process");
+mode=2;
+break;
+
+case 0x13:
+Serial.println("Speed Up process");
+mode=3;
+break;
+
+case 0x14:
+Serial.println("Speed Down Process");
+mode=4;
+break;
+
+case 0x15:
+Serial.println("Help Process");
+mode=5;
+break;
+
+default :
+Serial.println(com);
+mode=2;
+break;
+
+}
+
+ 
+
+}
+
+void Movement(){
+
+  if(x>=45){
+   x=45;
+  }else if(x<=-45){
+   x=-45;
+  }else if(y>=45){
+   y=45;
+  }else if(y<=-45){
+   y=-45;
+  }
+ 
+  
+  if(x<x1)
+   {
+     x_voltage = 1+(float) (x+45)*1.5/(x1+45);
+   }
+   else
+   {
+     x_voltage =  2.5 + (float) (x-x1)*1.5/(45-x1);
+   }
+   
+   if(y<y1)
+   {
+      y_voltage= 1+(float) (y+45)*1.5/(y1+45);
+   }
+   else
+   {     
+     y_voltage= 2.5 + (float) (y-y1)*1.5/(45-y1);
+   }
+   
+   if(x_voltage >2.0 && x_voltage<3.0)
+   {
+      x_voltage=2.5; 
+   }
+   
+   if(y_voltage>2.0 && y_voltage<3.0)
+    {
+       y_voltage= 2.5 ;
+    }
+
+Serial.print(x_voltage);
+Serial.print("  ");
+Serial.println(y_voltage);
+
+
+
+}
+
+
+void ReadFromTiltSensor(){
+
+  char c;
+  char xsign;
+  char ysign;
+  char x0;
+  char x1;
+  char y0;
+  char y1;
+  
+  while(!myserial_tilt.available());
+  
+     while(myserial_tilt.available()){
+       c=myserial_tilt.read();
+       //Serial.println(c);
+       //delay(1000);
+       if(c=='X' || c=='Y'){
+         break;
+       }
+      }
+      
+      while(!myserial_tilt.available());   
+        
+      
+      if(c=='X'){
+       if(myserial_tilt.available()){
+       xsign=myserial_tilt.read();
+        //Serial.print("xsign:=");
+        //Serial.println(xsign);
+       }
+       
+       while(!myserial_tilt.available());   
+     
+        if(myserial_tilt.available()){
+           x1=myserial_tilt.read();
+          // Serial.print("x1:=");
+          // Serial.println(x1);
+         }
+       
+        while(!myserial_tilt.available());
+          
+        if(myserial_tilt.available()){
+           x0=myserial_tilt.read();
+          // Serial.print("x0:=");
+          // Serial.println(x0);
+           }    
+          
+           x=(x1-48)*10+(x0-48);
+            if(xsign=='+'){
+               x=x;
+            }else if(xsign=='-'){
+             x=x*(-1);
+            }
+           // Serial.print("X_value:");
+           // Serial.print(x);
+           // Serial.print("    ");
+
+      
+    
+  
+      }
+      
+      if(c=='Y'){
+      
+      
+       if(myserial_tilt.available()){
+       ysign=myserial_tilt.read();
+        //Serial.print("ysign:=");
+        //Serial.println(ysign);
+       }
+       
+       while(!myserial_tilt.available());   
+     
+        if(myserial_tilt.available()){
+           y1=myserial_tilt.read();
+          // Serial.print("y1:=");
+          // Serial.println(y1);
+         }
+       
+        while(!myserial_tilt.available());
+          
+        if(myserial_tilt.available()){
+           y0=myserial_tilt.read();
+           //Serial.print("y0:=");
+           //Serial.println(y0);
+           }    
+          
+           y=(y1-48)*10+(y0-48);
+            if(ysign=='+'){
+               y=y;
+            }else if(ysign=='-'){
+             y=y*(-1);
+            }
+         //   Serial.print("Y_value:");
+          //  Serial.println(y);
+
+      }
+      
+     
+
+
+}
+
+void initialize()
+{
+   Serial.println("intilaization...");
+   delay(3000);
+   int holdx=0,holdy=0;
+   for(int i=0;i<5;i++)
+   {
+     ReadFromTiltSensor();
+     holdx+=x;
+     holdy+=y;
+     delay(100);
+   }
+   x1=holdx/5.0;
+   y1=holdy/5.0;
+   
+   Serial.print(x1);
+   Serial.print("  ");
+   Serial.println(y1);
+   
+   Serial.println("intilaization...");
+   
+   
+}
+
